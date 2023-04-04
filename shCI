@@ -1,0 +1,27 @@
+docker run -d -p 9889:80 --name nginx_test --mount type=bind,src=$WORKSPACE,dst=/usr/share/nginx/html/ nginx_test_img
+
+sleep 10
+
+echo "Testing check answer 200 OK"
+result="$(curl -I http://158.160.42.214:9889 | grep 200 | wc -l)"
+if  [ "$result" = "1" ]; then
+      echo "Test OK"
+else
+      echo "Test failed"
+	  exit 2
+fi
+echo "End of availability testing" $JOB_NAME $BUILD_DISPLAY_NAME `date` > /tmp/availability.log
+
+echo "Testing md5"
+online_md5="$(curl -sL http://158.160.42.214:9889/index.html | md5sum | cut -d ' ' -f 1)"
+local_md5="$(md5sum index.html | cut -d ' ' -f 1)"
+if [ "$online_md5" = "$local_md5" ]; then
+      echo "Test OK"
+else
+      echo "Test failed"
+	  exit 3
+fi
+echo "End of md5sum testing" $JOB_NAME $BUILD_DISPLAY_NAME `date` > /tmp/md5sum.log
+
+docker stop nginx_test
+docker rm nginx_test
